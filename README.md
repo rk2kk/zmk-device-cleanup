@@ -37,7 +37,7 @@ Windows 純正の GUI では「Unknown だけ選んで消す」がしづらい�
 | OS | Windows 10 1809 以降 / Windows 11 |
 | PowerShell | 5.1（標準）または 7.x |
 | 権限 | レポートは不要。**削除時のみ管理者権限**（UAC） |
-| 外部コマンド | `pnputil.exe`（標準搭載）、BLE 削除時のみ任意で PsExec |
+| 外部コマンド | `pnputil.exe`（標準搭載）、BLE 削除時のみ任意で PsExec（`tools\` に置けば自動使用） |
 
 ## 使い方
 

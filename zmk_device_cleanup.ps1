@@ -92,14 +92,17 @@ function New-SystemDeleteHelper {
         'setlocal',
         'set "HERE=%~dp0"',
         'if "%HERE:~-1%"=="\" set "HERE=%HERE:~0,-1%"',
-        'if not exist "%HERE%\PsExec.exe" (',
-        '    echo [ERROR] PsExec.exe not found in %HERE%',
-        '    echo Download: https://learn.microsoft.com/sysinternals/downloads/psexec',
+        'set "PSEXEC=%HERE%\PsExec.exe"',
+        'if not exist "%PSEXEC%" set "PSEXEC=%HERE%\..\tools\PsExec.exe"',
+        'if not exist "%PSEXEC%" (',
+        '    echo [ERROR] PsExec.exe not found.',
+        '    echo         Put PsExec.exe in this folder, or in ..\tools\',
+        '    echo         Download: https://learn.microsoft.com/sysinternals/downloads/psexec',
         '    pause',
         '    exit /b 1',
         ')',
         'echo Deleting ghost keys as SYSTEM ...',
-        '"%HERE%\PsExec.exe" -accepteula -w "%HERE%" -i -s -d cmd.exe /c "%HERE%\system_delete.bat"',
+        '"%PSEXEC%" -accepteula -w "%HERE%" -i -s -d cmd.exe /c "%HERE%\system_delete.bat"',
         'echo Started. Reboot the PC after the delete window finishes.',
         'pause'
     )
@@ -283,6 +286,7 @@ if ($IncludeBle) {
                 $wrapper = New-SystemDeleteHelper -Keys $stubborn -BackupDir $backupDir
                 Write-Host '  SYSTEM 権限での削除が必要です:' -ForegroundColor Yellow
                 Write-Host ("   1) PsExec.exe を配置 : {0}" -f $backupDir)
+                Write-Host ("      または同梱の    : {0}" -f (Join-Path $PSScriptRoot 'tools'))
                 Write-Host ("   2) 管理者で実行      : {0}" -f $wrapper)
                 Write-Host '   3) 完了後 PC を再起動'
                 Write-Host '   手動: PsExec.exe -i -s regedit.exe で該当キーを削除'

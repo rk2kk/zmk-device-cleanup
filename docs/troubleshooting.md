@@ -62,8 +62,9 @@ bthle_backup_<日時>\
 
 手順:
 
-1. [PsExec](https://learn.microsoft.com/sysinternals/downloads/psexec) を展開し、
-   `PsExec.exe` を `bthle_backup_<日時>\` に置く
+1. `PsExec.exe` を用意する（同梱の `tools\PsExec.exe` があれば自動で使われます。
+   無ければ [PsExec](https://learn.microsoft.com/sysinternals/downloads/psexec) を展開して
+   `bthle_backup_<日時>\` に置く）
 2. `run_as_system_psexec.bat` を**管理者として実行**
 3. 削除用のウィンドウが開くので、内容を確認して完了させる
 4. PC を再起動

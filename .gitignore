@@ -2,6 +2,10 @@
 bthle_backup_*/
 *.reg
 
+# PsExec は Microsoft の配布物のためリポジトリに含めない（tools/README.md 参照）
+tools/*.exe
+tools/Eula.txt
+
 # ローカル作業用
 tmp/
 *.bak
