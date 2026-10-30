@@ -14,3 +14,6 @@ tmp/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# execution logs
+zmk_device_cleanup_*.log
