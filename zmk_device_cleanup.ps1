@@ -4,10 +4,12 @@
     Windows に残った ZMK キーボードのゴースト（Status=Unknown）エントリを掃除する。
 
 .DESCRIPTION
-    対象は USB VID_1D50&PID_615E（ZMK 既定の VID/PID）の PnP エントリ。
+    対象は USB VID_1D50（ZMK 既定のベンダー ID 1D50）の PnP エントリ。
+    PID は 615E / 6160 など複数世代（cormoran / standard ZMK 等）をまとめて扱う。
 
       既定          : レポートのみ。管理者権限は不要。
-      -Apply        : Status が Unknown のエントリだけを pnputil /remove-device で削除。
+      -Apply        : Status が Unknown / Error のエントリを pnputil /remove-device で削除。
+                      （Error = Code 10 になった Composite Device もゴーストとして削除する）
                       昇格した PowerShell が必要。
       -IncludeBle   : HKLM\SYSTEM\CurrentControlSet\Enum\BTHLE\DEV_* も調査する。
                       -Apply と併用時は .reg にバックアップしてから削除を試みる。
@@ -19,6 +21,9 @@
 
 .PARAMETER IncludeBle
     Bluetooth LE の列挙キーも対象にする（管理者権限を推奨）。
+
+.PARAMETER StableOnly
+    指定すると削除対象を ForwardSkip の無い製品（未使用）に限定する。
 
 .EXAMPLE
     .\zmk_device_cleanup.ps1
@@ -35,7 +40,8 @@
 [CmdletBinding()]
 param(
     [switch]$Apply,
-    [switch]$IncludeBle
+    [switch]$IncludeBle,
+    [switch]$StableOnly
 )
 
 $ErrorActionPreference = 'Continue'
@@ -43,7 +49,8 @@ $ErrorActionPreference = 'Continue'
 # 日本語が cp932 コンソールで化けないように UTF-8 で出力する
 try { [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding(65001) } catch { }
 
-$VidPattern = 'VID_1D50&PID_615E'
+# VID_1D50 全体を対象にする（615E / 6160 / その他 ZMK 系の複数 PID を拾う）
+$VidPattern = 'VID_1D50'
 $BleRoot    = 'HKLM:\SYSTEM\CurrentControlSet\Enum\BTHLE'
 $ExitCode   = 0
 
@@ -144,7 +151,7 @@ if ($devices.Count -gt 0) {
 
 # --- 2) 削除 (USB / HID) -------------------------------------------------
 if ($Apply) {
-    Write-Section '削除 (Status=Unknown のみ)' 'Yellow'
+    Write-Section '削除 (Status=Unknown / Error のみ)' 'Yellow'
 
     if (-not $isAdmin) {
         Write-Warning '削除には管理者権限が必要です。'
@@ -163,12 +170,14 @@ if ($Apply) {
     $failed  = 0
 
     foreach ($d in ($devices | Sort-Object InstanceId)) {
-        if ($d.Status -ne 'Unknown') {
+        # 削除対象: Unknown(ゴースト) と Error(Code 10 になった個体)
+        # 接続中のデバイス(OK)のみスキップする
+        if ($d.Status -eq 'OK') {
             Write-Host ("  SKIP (接続中): {0}" -f $d.InstanceId)
             continue
         }
 
-        Write-Host ("  DEL  {0}" -f $d.InstanceId)
+        Write-Host ("  DEL  [{0}] {1}" -f $d.Status, $d.InstanceId)
         & $pnputil.Source /remove-device $d.InstanceId | Out-Null
 
         if ($LASTEXITCODE -eq 0) {
@@ -300,6 +309,11 @@ if ($IncludeBle) {
 Write-Host ''
 if ($Apply) {
     Write-Host 'ヒント: キーボードを USB 接続し直すと、必要なら新しいエントリが作り直されます。'
+    Write-Host ''
+    Write-Host 'DYA Studio (Web Serial) の "WritableStream is locked" エラーが出る場合は、'
+    Write-Host 'この削除後に PC を再起動してください（古い COM ポートのゴーストが原因のことがあります）。'
+    Write-Host '再起動後、ブラウザで chrome://settings/content/serialPorts (Edge は edge://) を開き、'
+    Write-Host '不要なポート許可を削除してから Studio を開き直すと確実です。'
 }
 else {
     Write-Host 'レポートのみの実行です。削除するには昇格した PowerShell で -Apply を付けてください:'

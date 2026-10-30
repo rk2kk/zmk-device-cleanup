@@ -5,6 +5,10 @@ rem
 rem  Double-click this file to actually remove the ghost entries.
 rem  Flow: show report  ->  ask Y/N  ->  run with admin rights (UAC).
 rem
+rem  Target: VID_1D50 (all ZMK-family PIDs incl. 6160).
+rem  Removes: Status=Unknown (ghost) + Status=Error (Code 10) entries.
+rem  Connected (OK) devices are always skipped.
+rem
 rem  Right-click "Run as administrator" works too (skips the UAC step).
 rem  "/nopause" : do not wait for a key press at the end.
 rem =====================================================================

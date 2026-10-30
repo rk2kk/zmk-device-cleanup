@@ -1,21 +1,23 @@
 # zmk-device-cleanup
 
 Windows に残った **ZMK キーボードのゴースト（幽霊）デバイス**を検出して削除する小さなツールです。
-デバイスマネージャーに残り続ける `Unknown` 状態の HID / USB エントリを、必要なものだけ安全に消します。
+デバイスマネージャーに残り続ける `Unknown` / `Error` 状態の HID / USB エントリを、必要なものだけ安全に消します。
 
 - 既定は **レポートのみ**（何も変更しません）
-- 削除するのは `Status = Unknown` のエントリだけ（接続中のデバイスはスキップ）
+- 削除するのは `Status = Unknown`（ゴースト）と `Status = Error`（Code 10 の個体）のエントリだけ（接続中のデバイスはスキップ）
+- 対象は **VID_1D50 全体**（PID 615E / 6160 など ZMK 系の複数世代をまとめて処理）
 - ドライバーストア（`pnputil /delete-driver`）には触りません
 - Bluetooth LE の列挙キー掃除はオプション（`.reg` バックアップ付き）
 
 ```
-実測例（このツールが必要になる典型パターン）
+実測例（このツールが対象にする典型パターン）
 
-  Status 'Unknown': 4 devices
-  [Unknown] Keyboard  HID\VID_1D50&PID_615E&COL01\6&1F856D2&0&0000
-  [Unknown] HIDClass  HID\VID_1D50&PID_615E&COL02\6&1F856D2&0&0001
-  [Unknown] Mouse     HID\VID_1D50&PID_615E&COL03\6&1F856D2&0&0002
-  [Unknown] HIDClass  USB\VID_1D50&PID_615E\C37E366DC802684A
+  Status 'Unknown': 17 devices / Status 'Error': 1 device
+  [Error]    USB       USB\VID_1D50&PID_615E\F6CFB0968BA2C3CA   <- Code 10 (USB Composite)
+  [Unknown]  Keyboard  HID\VID_1D50&PID_615E&COL01\6&1F856D2&0&0000
+  [Unknown]  Mouse     HID\VID_1D50&PID_615E&COL03\6&1F856D2&0&0002
+  [Unknown]  USB       USB\VID_1D50&PID_6160\F6CFB0968BA2C3CA   <- 別世代ファームの残骸
+  [Unknown]  Ports     USB\VID_1D50&PID_615E&MI_00\6&15ABDFF&0&0000  <- 古い COM ポート
 ```
 
 ## 症状と原因
@@ -27,8 +29,16 @@ ZMK ファームウェアのキーボードは、USB の VID/PID に既定値 **
 - デバイスマネージャー（非表示デバイス表示）に「不明なデバイス」が増え続ける
 - 同じ VID/PID の別個体を繋いだときに、古い設定やレポート記述子が干渉することがある
 - HID の列挙が不安定になる／キー入力が一瞬おかしくなる
+- **Windows のみで USB が認識されない（Code 10 / CM_PROB_FAILED_START）**
+  → 破損した個体エントリを Windows が「前回失敗した個体」として再現するため
+- **DYA Studio / Web Serial で「WritableStream is locked」**
+  → 古い COM ポート（ゴースト）がポート一覧に残り、開こうとしたポートがロック扱いになることがある
+  （削除後はブラウザのシリアルポート許可もリセットすると確実）
 
-Windows 純正の GUI では「Unknown だけ選んで消す」がしづらいので、本ツールはそこだけを対象にします。
+> Android では USB が動くのに Windows だけ Code 10 になる場合は、ファームではなく
+> このゴーストデバイスが原因の可能性が高いです（実例: docs/ 参照）。
+
+Windows 純正の GUI では「Unknown / Error だけ選んで消す」がしづらいので、本ツールはそこだけを対象にします。
 
 ## 動作環境
 
@@ -47,6 +57,7 @@ Windows 純正の GUI では「Unknown だけ選んで消す」がしづらい�
 2. `zmk_device_cleanup_apply.bat` をダブルクリック
 3. 一覧を確認して `Y` を入力
 4. UAC ダイアログで「はい」
+5. 完了したら PC を再起動（DYA Studio を使う場合は特に推奨）
 
 削除結果は昇格後のウィンドウに表示されます。
 
@@ -86,7 +97,7 @@ PowerShell から直接呼ぶ場合:
 
 | オプション | 説明 |
 |---|---|
-| `-Apply` | `Status = Unknown` のエントリを `pnputil /remove-device` で削除 |
+| `-Apply` | `Status = Unknown` / `Error` のエントリを `pnputil /remove-device` で削除 |
 | `-IncludeBle` | `HKLM\SYSTEM\CurrentControlSet\Enum\BTHLE\DEV_*` も調査（`-Apply` 併用時は `.reg` にバックアップ） |
 
 ## 終了コード
@@ -100,7 +111,7 @@ PowerShell から直接呼ぶ場合:
 
 ## 安全設計
 
-- **削除対象は `Status = Unknown` のみ。** 接続中のデバイスは `SKIP (接続中)` として必ず残します
+- **削除対象は `Status = Unknown` と `Error` のみ。** 接続中のデバイス（`OK`）は必ずスキップします
 - 削除前に `Y/N` の確認（`apply` 用バッチ）
 - ドライバーパッケージは削除しません（`/remove-device` は個体エントリのみ）
 - BLE の削除時は、対象キーを `.reg` にエクスポートしてから実行します
@@ -109,9 +120,9 @@ PowerShell から直接呼ぶ場合:
 
 ## 仕組み
 
-1. `Get-PnpDevice` で `InstanceId` に `VID_1D50&PID_615E` を含むエントリを列挙
-2. `Status` を表示（`OK` = 接続中 / `Unknown` = ゴースト）
-3. `-Apply` のとき、`Unknown` のものだけ `pnputil /remove-device <InstanceId>` で削除
+1. `Get-PnpDevice` で `InstanceId` に `VID_1D50` を含むエントリを列挙（PID は 615E / 6160 等すべて）
+2. `Status` を表示（`OK` = 接続中 / `Unknown` = ゴースト / `Error` = Code 10）
+3. `-Apply` のとき、`Unknown` / `Error` のものだけ `pnputil /remove-device <InstanceId>` で削除
 4. `-IncludeBle` のとき、`Enum\BTHLE\DEV_*` 配下の `VID&00011D50_PID&615E` サブキーを調査
    （レジストリの `Enum` は SYSTEM 所有のため、削除は `Remove-Item` → 失敗時は PsExec 手順）
 
@@ -122,7 +133,7 @@ PowerShell から直接呼ぶ場合:
 `zmk_device_cleanup.ps1` の先頭付近にある定数を書き換えれば、他のキーボードにも使えます。
 
 ```powershell
-$VidPattern = 'VID_1D50&PID_615E'   # ← 例: 'VID_1209&PID_0001'
+$VidPattern = 'VID_1D50'   # ← 例: 'VID_1209'（ベンダー ID のみ指定）
 ```
 
 BLE 側は該当サブキー名（`1D50` / `615E`）も合わせて変更してください。
@@ -138,10 +149,10 @@ BLE 側は該当サブキー名（`1D50` / `615E`）も合わせて変更して�
 
 ## 制限事項
 
-- 対象は既定で **ZMK の `1D50:615E` 固定**（定数変更で対応可能）
+- 対象は既定で **ZMK の VID `1D50` 全体**（定数変更で対応可能）
 - Windows 専用（Linux / macOS では動きません）
 - BLE のレジストリ削除は環境によっては SYSTEM 権限が必要で、自動では完結しません
-- 削除後に再起動を求められる場合があります（通常は不要）
+- 削除後に再起動を求められる場合があります（通常は不要。DYA Studio 使用時は推奨）
 
 ## 変更履歴
 
@@ -156,10 +167,11 @@ BLE 側は該当サブキー名（`1D50` / `615E`）も合わせて変更して�
 ## English
 
 A small Windows tool that finds and removes **stale (ghost) ZMK keyboard devices**
-(`Status = Unknown` HID/USB entries left behind under `VID_1D50&PID_615E`).
+(`Status = Unknown` / `Error` HID/USB entries left behind under `VID_1D50`, covering
+all ZMK-family PIDs such as `615E` and `6160`).
 
 - Report-only by default — nothing is changed
-- Removes **only** entries with `Status = Unknown`; connected devices are skipped
+- Removes **only** entries with `Status = Unknown` or `Error` (Code 10); connected devices are skipped
 - Never touches the driver store (`pnputil /remove-device` only)
 - Optional Bluetooth LE registry cleanup with `.reg` backup
 

@@ -4,6 +4,25 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/lang/ja/).
 
+## [1.2.0] - 2026-10-30
+
+### Added
+
+- 削除後に DYA Studio / Web Serial の「WritableStream is locked」対策手順を表示
+  （PC 再起動 + ブラウザのシリアルポート許可のリセットを案内）
+
+### Changed
+
+- 対象 VID を `VID_1D50&PID_615E` 固定から **`VID_1D50` 全体** に拡大
+  （PID 615E / 6160 など ZMK 系の複数世代のゴーストをまとめて掃除できる）
+- 削除対象を `Status = Unknown` のみから **`Unknown` + `Error`（Code 10）** に拡大
+  （「Error の USB Composite Device が削除されず残る」実害への対応）
+
+### Fixed
+
+- 実行結果ベースの改善: `Error` ステータスのデバイスが SKIP されて
+  ゴーストが残り続ける問題を修正
+
 ## [1.1.0] - 2026-10-30
 
 ### Added

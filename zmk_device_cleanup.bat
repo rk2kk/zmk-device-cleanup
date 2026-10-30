@@ -7,6 +7,10 @@ rem    zmk_device_cleanup.bat apply         remove stale USB/HID (UAC)
 rem    zmk_device_cleanup.bat ble           report + Bluetooth LE keys
 rem    zmk_device_cleanup.bat apply ble     remove both (UAC)
 rem
+rem  Target: VID_1D50 (PID 615E / 6160 etc. - all ZMK-family PIDs)
+rem  Removes: Status=Unknown (ghost) and Status=Error (Code 10) entries.
+rem           Connected (OK) devices are always skipped.
+rem
 rem    /nopause : do not wait for a key at the end
 rem =====================================================================
 setlocal EnableExtensions
