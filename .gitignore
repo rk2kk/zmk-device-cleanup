@@ -1,0 +1,12 @@
+# 実行時に生成されるバックアップ（削除前の .reg と PsExec ヘルパー）
+bthle_backup_*/
+*.reg
+
+# ローカル作業用
+tmp/
+*.bak
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,6 @@
+# 既定は自動判定。バッチは cmd.exe が CRLF を前提とするため明示する
+* text=auto
+
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+*.md   text eol=lf
