@@ -49,6 +49,27 @@ $ErrorActionPreference = 'Continue'
 # 日本語が cp932 コンソールで化けないように UTF-8 で出力する
 try { [Console]::OutputEncoding = [System.Text.Encoding]::GetEncoding(65001) } catch { }
 
+# ------------------------------------------------------------------
+# ログ出力: .ps1 と同じフォルダ (= バッチファイルと同じ場所) に保存する
+# ------------------------------------------------------------------
+$LogDir = $PSScriptRoot
+if ([string]::IsNullOrEmpty($LogDir)) { $LogDir = (Get-Location).Path }
+$LogStamp = Get-Date -Format 'yyyyMMdd_HHmmss'
+$LogPath  = Join-Path $LogDir ('zmk_device_cleanup_{0}.log' -f $LogStamp)
+
+try {
+    Start-Transcript -LiteralPath $LogPath -Force -ErrorAction Stop | Out-Null
+    Write-Host ("ログ: {0}" -f $LogPath) -ForegroundColor DarkGray
+}
+catch {
+    Write-Warning ("ログファイルを開けませんでした: {0} ({1})" -f $LogPath, $_.Exception.Message)
+}
+
+# exit してもトランスクリプトが閉じられるようにする
+Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action {
+    try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch { }
+} | Out-Null
+
 # VID_1D50 全体を対象にする（615E / 6160 / その他 ZMK 系の複数 PID を拾う）
 $VidPattern = 'VID_1D50'
 $BleRoot    = 'HKLM:\SYSTEM\CurrentControlSet\Enum\BTHLE'
@@ -157,12 +178,14 @@ if ($Apply) {
         Write-Warning '削除には管理者権限が必要です。'
         Write-Host ("  昇格して再実行: powershell -ExecutionPolicy Bypass -File `"{0}`" -Apply" -f $PSCommandPath)
         Write-Host '  同梱の zmk_device_cleanup.bat に apply を付けると自動で昇格します。'
+        try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch { }
         exit 1
     }
 
     $pnputil = Get-Command pnputil.exe -ErrorAction SilentlyContinue
     if (-not $pnputil) {
         Write-Warning 'pnputil.exe が見つかりません（Windows 10 1809 以降が必要）。'
+        try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch { }
         exit 3
     }
 
@@ -321,4 +344,4 @@ else {
     Write-Host '  Bluetooth LE も対象にする場合は -IncludeBle を追加。'
 }
 
-if ($ExitCode -ne 0) { exit $ExitCode }
+if ($ExitCode -ne 0) { try { Stop-Transcript -ErrorAction SilentlyContinue | Out-Null } catch { }; exit $ExitCode }
