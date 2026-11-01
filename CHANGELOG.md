@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/lang/ja/).
 
 - 削除後に DYA Studio / Web Serial の「WritableStream is locked」対策手順を表示
   （PC 再起動 + ブラウザのシリアルポート許可のリセットを案内）
+- 実行ログをスクリプトと同じフォルダに自動保存
+  （`zmk_device_cleanup_<timestamp>.log`、`Start-Transcript` で取得・`.gitignore` 済み）
 
 ### Changed
 
