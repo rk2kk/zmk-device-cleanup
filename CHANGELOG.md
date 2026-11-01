@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/ja/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/lang/ja/).
 
+## [Unreleased]
+
+### Docs
+
+- README に「これは何を直さないか」を追加。スキャン／広告開始の失敗や MCU 停止は
+  ZMK ファームウェア側の領域で、本ツールの対象外であることを明示
+- 症状リストから未検証の「HID の列挙が不安定になる／キー入力が一瞬おかしくなる」を削除し、
+  代わりに「ペアリング一覧に古いキーボードが残り続ける」を追加
+- `docs/troubleshooting.md` に `settings_reset.uf2` 後の後片付け手順を追加
+  （キーボード側の設定消去と Windows 側のエントリ削除は両方必要）
+
 ## [1.2.0] - 2026-10-30
 
 ### Added
